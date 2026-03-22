@@ -1,123 +1,112 @@
-# BOFT DreamBooth: Subject-Driven Image Generation
+# BOFT DreamBooth Mini-Project
 
-**Mini-Project: Parameter-Efficient Finetuning for Pretrained Foundation Models**
+本项目基于 `boft.ipynb`，使用 **BOFT (Butterfly Orthogonal Fine-Tuning)** 对预训练 Stable Diffusion 模型进行 DreamBooth 主体驱动生成微调（subject-driven generation）。
 
-This project demonstrates using **BOFT** (Butterfly Orthogonal Fine-Tuning) to finetune a pretrained Stable Diffusion model for subject-driven image generation via DreamBooth.
+## 1. 项目目标（对应 mini-project 要求）
 
-## Method
+- 选择一个下游任务：DreamBooth 主体定制生成
+- 使用预训练基础模型：`sd2-community/stable-diffusion-2-1`
+- 使用参数高效微调方法：BOFT（PEFT）
+- 给出微调前后可视化对比与结果分析
 
-BOFT is a parameter-efficient finetuning method from the orthogonal finetuning family. It inserts trainable orthogonal matrices with **butterfly factorization** structure into the attention layers of the UNet. Only these small adapter matrices are trained while all pretrained weights remain frozen.
+## 2. 方法简介
 
-Key advantages:
-- **Parameter-efficient**: Only ~0.8% of parameters are trainable
-- **Orthogonal constraint**: Preserves the hyperspherical energy of pretrained representations
-- **Full-rank updates**: Unlike LoRA, BOFT supports full-rank orthogonal transformations
+BOFT 在 UNet 注意力层中注入带蝶形分解结构的正交可训练矩阵，仅训练适配器参数，冻结原始大模型参数。核心特点：
 
-References:
+- 参数高效：仅训练很小比例参数（运行时会打印 trainable ratio）
+- 正交约束：尽量保持预训练表示空间结构
+- 全秩更新：相比低秩加性方法，表达能力更强
+
+参考资料：
 - [BOFT Paper (ICLR 2024)](https://arxiv.org/abs/2311.06243)
 - [OFT Paper](https://arxiv.org/abs/2306.07280)
-- [HuggingFace PEFT Library](https://huggingface.co/docs/peft)
+- [PEFT 文档](https://huggingface.co/docs/peft)
 
-## Project Structure
+## 3. 当前代码与目录（已对齐实际仓库）
 
+```text
+BOFT/
+├── boft.ipynb
+├── environment.yml
+├── README.md
+├── baseline_images.png
+├── finetuned_images.png
+├── comparison_before_after.png
+├── multi_prompt_results.png
+├── training_loss.png
+├── data/
+│   ├── dreambooth/dataset/dog/
+│   ├── class_data/dog/
+│   └── output/boft/unet/
+│       ├── 200/
+│       ├── 400/
+│       ├── 600/
+│       └── 800/
+└── report/
+    └── report.md
 ```
-miniProject/
-├── demo.ipynb              # Main notebook: training + visualization
-├── train_dreambooth.py     # Standalone training script (accelerate-based)
-├── requirements.txt        # Python dependencies
-├── README.md               # This file
-└── utils/
-    ├── __init__.py
-    ├── args_loader.py      # Argument parser for CLI training
-    ├── dataset.py          # DreamBooth dataset class
-    └── tracemalloc.py      # Memory tracking utilities
-```
 
-## Setup
+## 4. 实验配置（来自 `boft.ipynb`）
 
-### Install Dependencies
+### 模型与任务
+
+- Base model: `sd2-community/stable-diffusion-2-1`
+- 唯一标识词：`sks`
+- 实例提示词：`a photo of sks dog`
+- 类别提示词：`a photo of dog`
+
+### 训练参数
+
+- `RESOLUTION=512`
+- `MAX_TRAIN_STEPS=800`
+- `LEARNING_RATE=3e-5`
+- `TRAIN_BATCH_SIZE=1`
+- `NUM_CLASS_IMAGES=100`
+- `CHECKPOINT_STEPS=200`
+- `PRIOR_LOSS_WEIGHT=1.0`
+
+### BOFT 参数
+
+- `boft_block_num=8`
+- `boft_block_size=0`
+- `boft_n_butterfly_factor=1`
+- `boft_dropout=0.1`
+- `target_modules=[to_q, to_v, to_k, to_out.0]`
+- `bias=none`（见 `data/output/boft/unet/800/adapter_config.json`）
+
+## 5. 运行方式
+
+### 5.1 创建环境
 
 ```bash
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate aist
 ```
 
-### Hardware Requirements
-
-- GPU with at least 8GB VRAM (tested on NVIDIA GPUs with CUDA)
-- For CPU-only systems, reduce resolution and training steps
-
-## Usage
-
-### Option 1: Jupyter Notebook (Recommended)
-
-Run `demo.ipynb` for an interactive experience with full visualization:
+### 5.2 启动 Notebook
 
 ```bash
-jupyter notebook demo.ipynb
+jupyter notebook boft.ipynb
 ```
 
-The notebook includes:
-1. Dataset download and visualization
-2. Baseline image generation (before finetuning)
-3. BOFT finetuning with training loss logging
-4. Training loss curve visualization
-5. Post-finetuning image generation
-6. Before vs. after qualitative comparison
-7. Multi-prompt generation gallery
+按顺序执行单元格即可完成：
+1. 数据准备与可视化
+2. 微调前基线生成
+3. BOFT 微调训练（含 checkpoint）
+4. 损失曲线绘制
+5. 微调后生成与定性对比
+6. 多提示词泛化生成
 
-### Option 2: Command-Line Training
+## 6. 结果文件
 
-For training via command line with `accelerate`:
+- 基线图：`baseline_images.png`
+- 微调后图：`finetuned_images.png`
+- 前后对比图：`comparison_before_after.png`
+- 多提示词结果：`multi_prompt_results.png`
+- 训练损失图：`training_loss.png`
+- 适配器 checkpoint：`data/output/boft/unet/{200,400,600,800}`
 
-```bash
-accelerate launch train_dreambooth.py \
-  --pretrained_model_name_or_path="stabilityai/stable-diffusion-2-1" \
-  --instance_data_dir="./data/dreambooth/dataset/dog" \
-  --class_data_dir="./data/class_data/dog" \
-  --output_dir="./data/output/boft" \
-  --instance_prompt="a photo of sks dog" \
-  --class_prompt="a photo of dog" \
-  --with_prior_preservation --prior_loss_weight=1.0 \
-  --resolution=512 \
-  --train_batch_size=1 \
-  --num_dataloader_workers=0 \
-  --lr_scheduler="constant" \
-  --lr_warmup_steps=0 \
-  --num_class_images=100 \
-  --use_boft \
-  --boft_block_num=8 \
-  --boft_block_size=0 \
-  --boft_n_butterfly_factor=1 \
-  --boft_dropout=0.1 \
-  --boft_bias="boft_only" \
-  --learning_rate=3e-5 \
-  --max_train_steps=800 \
-  --checkpointing_steps=200 \
-  --no_tracemalloc \
-  --report_to="wandb"
-```
+## 7. 说明
 
-> **Note for Windows**: Set `--num_dataloader_workers=0` and add `--no_tracemalloc`.
-
-## BOFT Configuration
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `boft_block_num` | 8 | Number of orthogonal blocks |
-| `boft_block_size` | 0 | Auto-determined from block_num |
-| `boft_n_butterfly_factor` | 1 | Butterfly factors (1 = vanilla OFT) |
-| `boft_dropout` | 0.1 | Multiplicative dropout rate |
-| `bias` | boft_only | Only train BOFT bias parameters |
-| `target_modules` | to_q, to_v, to_k, to_out.0 | UNet attention modules |
-
-## Dataset
-
-We use the **dog** subject from the [Google DreamBooth dataset](https://github.com/google/dreambooth), which contains 5 images of a specific dog. The dataset is automatically downloaded when running the notebook.
-
-## Results
-
-After training, the model generates images of the specific dog subject in various contexts while maintaining the subject's identity. See `demo.ipynb` for full results including:
-
-- Training loss curves
-- Before vs. after finetuning comparisons
-- Multi-prompt generation gallery
+- 当前仓库以 Notebook 实现为主，不包含独立 `train_dreambooth.py`。
+- `report/report.md` 已根据本仓库实际配置与产物同步更新。
