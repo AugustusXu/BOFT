@@ -31,7 +31,7 @@ BOFT/
 ├── boft.ipynb
 ├── environment.yml
 ├── README.md
-├── README.en.md
+├── README_zh.md
 ├── baseline_images.png
 ├── finetuned_images.png
 ├── comparison_before_after.png
@@ -46,8 +46,7 @@ BOFT/
 │       ├── 600/
 │       └── 800/
 └── report/
-    ├── report.md
-    └── report.en.md
+    └── report.md
 ```
 
 ## 4. Experiment Settings (From `boft.ipynb`)

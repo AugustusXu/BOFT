@@ -1,9 +1,9 @@
 # Mini-Project Report: BOFT for DreamBooth Subject-Driven Generation
 
-**Course Theme:** Parameter-Efficient Finetuning for Pretrained Models  
-**Downstream Task:** Subject-Driven Image Generation (DreamBooth)  
+**Name:** `XU  Kai`
+****Student ID:** `1155239333`  
 **Implementation File:** `boft.ipynb`  
-**Repository:** Current `BOFT` directory version  
+**GitHub Repository:** `https://github.com/AugustusXu/BOFT` 
 
 ## 1. Abstract
 
