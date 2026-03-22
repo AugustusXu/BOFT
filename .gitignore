@@ -9,5 +9,5 @@ outputs/checkpoints/
 outputs/model/
 outputs/logs/
 .vscode/
-data/
+data/class_data/
 
